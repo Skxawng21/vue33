@@ -178,24 +178,35 @@ const handleSubmit = async (event) => {
     };
 
     // Вариант с fetch (нативно, как в вашем примере)
-    const response = await fetch("https://jsonplaceholder.typicode.com/users", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify(payload),
-    });
+    import axios from "axios";
 
-    if (!response.ok) {
-      throw new Error(`Ошибка сервера: ${response.status}`);
-    }
+    const response = await axios.post(
+      "https://jsonplaceholder.typicode.com/users",
+      payload,
+      {
+        headers: {
+          "Content-Type": "application/json",
+        },
+      }
+    );
 
-    const data = await response.json();
+    const data = response.data;
     successMessage.value =
       "Регистрация успешно отправлена (демо). Данные: " + JSON.stringify(data, null, 2);
+    form.name = "";
+    form.email = "";
+    form.password = "";
+    form.confirmPassword = "";
+    
   } catch (err) {
-    generalError.value =
-      err instanceof Error ? err.message : "Произошла ошибка при отправке.";
+    if (axios.isAxiosError(err) && err.response) {
+      generalError.value = `Ошибка сервера: ${err.response.status} ${err.response.statusText}`;
+    } else if (axios.isAxiosError(err) && err.request) {
+      generalError.value = "Сервер не отвечает. Проверьте соединение.";
+    } else {
+      generalError.value =
+        err instanceof Error ? err.message : "Произошла ошибка при отправке.";
+    }
   } finally {
     isLoading.value = false;
   }
