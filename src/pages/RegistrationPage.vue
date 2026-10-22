@@ -12,6 +12,8 @@
           type="text"
           class="form-input"
           :class="{ 'input-error': errors.name }"
+          @blur="validateName"
+          @input="validateName"
         />
         <span v-if="errors.name" class="error-message">{{ errors.name }}</span>
       </div>
@@ -25,6 +27,8 @@
           type="email"
           class="form-input"
           :class="{ 'input-error': errors.email }"
+          @blur="validateEmail"
+          @input="validateEmail"
         />
         <span v-if="errors.email" class="error-message">{{ errors.email }}</span>
       </div>
@@ -38,6 +42,8 @@
           type="password"
           class="form-input"
           :class="{ 'input-error': errors.password }"
+          @blur="validatePassword"
+          @input="validatePassword"
         />
         <span v-if="errors.password" class="error-message">{{ errors.password }}</span>
       </div>
@@ -51,20 +57,20 @@
           type="password"
           class="form-input"
           :class="{ 'input-error': errors.confirmPassword }"
+          @blur="validateConfirmPassword"
+          @input="validateConfirmPassword"
         />
-        <span v-if="errors.confirmPassword" class="error-message">{{ errors.confirmPassword }}</span>
+        <span v-if="errors.confirmPassword" class="error-message">{{
+          errors.confirmPassword
+        }}</span>
       </div>
 
       <!-- Общее сообщение об ошибке -->
       <div v-if="generalError" class="general-error">{{ generalError }}</div>
 
       <!-- Кнопка отправки -->
-      <button
-        type="submit"
-        class="btn-submit"
-        :disabled="isLoading"
-      >
-        {{ isLoading ? 'Отправка...' : 'Зарегистрироваться' }}
+      <button type="submit" class="btn-submit" :disabled="isLoading">
+        {{ isLoading ? "Отправка..." : "Зарегистрироваться" }}
       </button>
     </form>
 
@@ -76,116 +82,127 @@
 </template>
 
 <script setup>
-import { ref } from 'vue'
-import {reactive } from 'axios'
-// import axios from 'axios' // Раскомментируйте, если установили axios
+import { ref, reactive } from "vue";
 
-const isLoading = ref(false)
-const successMessage = ref('')
-const generalError = ref(null)
+const isLoading = ref(false);
+const successMessage = ref("");
+const generalError = ref(null);
 
 // Данные формы
 const form = reactive({
-  name: '',
-  email: '',
-  password: '',
-  confirmPassword: ''
-})
+  name: "",
+  email: "",
+  password: "",
+  confirmPassword: "",
+});
 
 // Ошибки валидации
 const errors = reactive({
   name: null,
   email: null,
   password: null,
-  confirmPassword: null
-})
+  confirmPassword: null,
+});
 
-// Простая валидация
-const validate = () => {
-  // Сброс ошибок
-  Object.keys(errors).forEach(key => (errors[key] = null))
-  let hasErrors = false
+// функции валидации
 
-  // Имя: не пустое, длина >= 2
+const validateName = () => {
   if (!form.name || form.name.trim().length < 2) {
-    errors.name = 'Имя должно быть не короче 2 символов.'
-    hasErrors = true
+    errors.name = "Имя должно быть не короче 2 символов.";
+  } else {
+    errors.name = null;
   }
+};
 
-  // Email: не пустой, простой формат (исправлена регулярка из документа)
-  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+const validateEmail = () => {
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
   if (!form.email || !emailRegex.test(form.email)) {
-    errors.email = 'Введите корректный email.'
-    hasErrors = true
+    errors.email = "Введите корректный email.";
+  } else {
+    errors.email = null;
+  }
+};
+
+const validatePassword = () => {
+  const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*]).{8,}$/;
+  if (!form.password || !passwordRegex.test(form.password)) {
+    errors.password =
+      "Пароль от 8 символов, должен содержать: строчные и прописные буквы, цифры и спецсимволы (!@#$%^&*).";
+  } else {
+    errors.password = null;
   }
 
-  // Пароль: не пустой, длина >= 6
-  if (!form.password || form.password.length < 6) {
-    errors.password = 'Пароль должен быть не короче 6 символов.'
-    hasErrors = true
+  if (form.confirmPassword) {
+    validateConfirmPassword();
   }
+};
 
-  // Подтверждение пароля: совпадает с паролем
-  if (form.password !== form.confirmPassword) {
-    errors.confirmPassword = 'Пароли не совпадают.'
-    hasErrors = true
-  } else if (!form.confirmPassword && form.password) {
-    // Если пароль заполнен, а подтверждение пустое
-    errors.confirmPassword = 'Подтвердите пароль.'
-    hasErrors = true
+const validateConfirmPassword = () => {
+  if (!form.confirmPassword) {
+    errors.confirmPassword = "Подтвердите пароль.";
+  } else if (form.password !== form.confirmPassword) {
+    errors.confirmPassword = "Пароли не совпадают.";
+  } else {
+    errors.confirmPassword = null;
   }
+};
 
-  return !hasErrors
-}
+// проврека на кнопку
+const validate = () => {
+  validateName();
+  validateEmail();
+  validatePassword();
+  validateConfirmPassword();
 
+  return !Object.values(errors).some((error) => error !== null);
+};
+
+// отправка формы
 const handleSubmit = async (event) => {
-  event.preventDefault() // предотвращаем перезагрузку страницы
-  successMessage.value = ''
-  generalError.value = null
+  event.preventDefault();
+  successMessage.value = "";
+  generalError.value = null;
 
+  // Запускаем полную проверку перед отправкой
   if (!validate()) {
-    return // если есть ошибки валидации – не отправляем
+    return;
   }
 
-  isLoading.value = true
+  isLoading.value = true;
 
   try {
     const payload = {
       name: form.name.trim(),
       email: form.email.trim(),
       password: form.password,
-      confirmPassword: form.confirmPassword 
-    }
+    };
 
-    // Вариант 1: fetch (нативно)
-    // Исправлена опечатка в URL из документа (было typecode, стало typicode)
-    const response = await fetch('https://jsonplaceholder.typicode.com/users', {
-      method: 'POST',
+    // Вариант с fetch (нативно, как в вашем примере)
+    const response = await fetch("https://jsonplaceholder.typicode.com/users", {
+      method: "POST",
       headers: {
-        'Content-Type': 'application/json'
+        "Content-Type": "application/json",
       },
-      body: JSON.stringify(payload)
-    })
+      body: JSON.stringify(payload),
+    });
 
     if (!response.ok) {
-      // Исправлена опечатка с кавычками в строке из документа
-      throw new Error(`Ошибка сервера: ${response.status}`)
+      throw new Error(`Ошибка сервера: ${response.status}`);
     }
 
-    const data = await response.json()
-    successMessage.value = 'Регистрация успешно отправлена (демо). Данные: ' + JSON.stringify(data, null, 2)
-    
+    const data = await response.json();
+    successMessage.value =
+      "Регистрация успешно отправлена (демо). Данные: " + JSON.stringify(data, null, 2);
   } catch (err) {
-    // Исправлена опечатка в слове catch (в документе было просто catc)
-    generalError.value = err instanceof Error ? err.message : 'Произошла ошибка при отправке.'
+    generalError.value =
+      err instanceof Error ? err.message : "Произошла ошибка при отправке.";
   } finally {
-    isLoading.value = false
+    isLoading.value = false;
   }
-}
+};
 </script>
 
 <style scoped>
-/* Базовые стили для формы (Пункт 6 из задания) */
 .form-page {
   max-width: 400px;
   margin: 2rem auto;
@@ -254,6 +271,6 @@ const handleSubmit = async (event) => {
   background-color: #d4edda;
   color: #155724;
   border-radius: 4px;
-  word-break: break-all; /* Чтобы длинный JSON не ломал верстку */
+  word-break: break-all;
 }
 </style>
